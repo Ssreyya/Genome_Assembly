@@ -1,0 +1,72 @@
+
+"""
+@author: SSudharsan
+"""
+
+""" taking the output of spades de novo assembly from sequecning data and filtering it based on length, coverage of contigs and removing phiX contamination"""
+
+import sys
+import os
+
+
+def Filter_Contigs(length,cov):
+    name=input("Enter file:")
+    handle=open(name)
+    contigs=handle.readlines()
+    
+    """ to use blastn on command line to search for and remove phiX contamination"""
+    b=name.split("/")  #to take in the name of the file
+    cname= b[-1] #path on linux command line
+    dname=b[-1][0:7]  #outputfilename(unique for each output file)(index depending on the number of charcaters needed in the name)
+    database="makeblastdb "+"-in "+ cname+" -dbtype nucl "+" -out " + dname #makeblastdatabase script for command line
+    os.system(database)
+      
+    f="blastnof"+dname  #output name
+    cmd= "blastn -query phiX174.fas -db " + dname   +" -outfmt 1 -out "+f
+    os.system(cmd)
+    outfile="cat "+ f + " > " +f+"out.txt" #output text filename for blastn 
+    os.system(outfile)
+    
+    name1=f+"out.txt"  #output file name for blastn result(the file to read and check for phiX contamination)
+    handle1=open(name1) 
+    lines=handle1.readlines()
+    
+    nodes_toremove=[]  #creating a list that would contain the hits to be removed
+    for line1 in lines:
+        if "NODE" not in line1:
+            print("no_hits_for_phiX")
+            break
+        else:
+            nodes_toremove.append(">"+line1)
+        
+    """remove all contigs with a length less than 250 and coverage less than 10 """
+    for line in contigs:
+        if ">" in line:
+            splitlist=line.split("_")
+            if int(splitlist[3])<length or float(splitlist[5])<cov or line in nodes_toremove:
+                i_header = contigs.index(line)
+                d=i_header+1
+                for i in range(d,len(contigs)):
+                    if ">" not in contigs[d]:
+                        del contigs[d]
+                    else:
+                        break
+
+    finalcontigs=[]
+    t=name.split("/")
+    x="FilteredNew" + t[-1]
+    w=">"+t[-1]+"\n"
+     
+    for line in contigs:
+        if  ">" not in line:
+            finalcontigs.append(line)
+    
+    """ write the output to a new file"""
+    s=str()
+    s=s+w
+    for i in finalcontigs:
+        s=s+i
+    o=open(x,'w')
+    o.write(s)
+    
+Filter_Contigs(250,10) #calling the function
