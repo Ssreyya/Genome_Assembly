@@ -39,8 +39,8 @@ class BoyerMoore:
                 i += self.badcharacterrule(mismatch,j) # excute bad character rule to determine next i
         return listofmatches
         
-        
-        
-                
+     
+    
+    
   #Referenced from Bioinformatics algorithms - Design and Implementation in Python
 
