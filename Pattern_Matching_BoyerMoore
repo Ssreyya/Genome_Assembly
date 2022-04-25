@@ -40,6 +40,7 @@ class BoyerMoore:
         return listofmatches
         
      
+     
     
     
   #Referenced from Bioinformatics algorithms - Design and Implementation in Python
