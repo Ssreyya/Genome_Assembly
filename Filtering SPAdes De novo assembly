@@ -1,7 +1,4 @@
 
-"""
-@author: SSudharsan
-"""
 
 """ taking the output of spades de novo assembly from sequecning data and filtering it based on length, coverage of contigs and removing phiX contamination"""
 
