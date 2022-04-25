@@ -1,0 +1,46 @@
+
+#Python 3.8
+# This code uses the bad charcater rule based on the boyer moore algorithm for pattern matching
+class BoyerMoore:
+    
+    def __init__( self , Pattern):
+        self.Pattern = Pattern
+    
+    
+    def badcharacterrule(self,mismatch_in_text,index_pattern):  
+        i = index_pattern - 1 # position of mismatch in pattern
+        while i >= 0 and self.Pattern[i+1] != mismatch_in_text: # to find if mismatched character present in pattern 
+            if self.Pattern[i] == mismatch_in_text:  
+                return index_pattern-i
+            else: 
+                i = i - 1  
+        if i< 0:  # if mismatched character(in text), not present in pattern, skip over past the alignment
+            return (index_pattern+1)  
+            
+        
+  
+    def getmatches(self,Text):
+        listofmatches=[] #list containing the starting index of matches in text
+        i=0
+        while i < (len(Text)-len(self.Pattern))+1: # loop going through the text (from left to right)
+            
+            j=len(self.Pattern)-1
+            k=False
+            while j > -1 and k is False:  # loop going through pattern (from right to left)
+                if Text[i+j] == self.Pattern[j]: # if theres a match at position j
+                    j = j-1
+                else:
+                    k=True
+            if j == -1:  # if pattern matches at the given position i 
+                listofmatches.append(i)  # add position i to list 
+                i = i+1  
+            else:
+                mismatch = Text[i+j]  # if pattern doesn't match
+                i += self.badcharacterrule(mismatch,j) # excute bad character rule to determine next i
+        return listofmatches
+        
+        
+        
+                
+  #Referenced from Bioinformatics algorithms - Design and Implementation in Python
+
