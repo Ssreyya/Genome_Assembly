@@ -1,0 +1,119 @@
+"""Finding Frequent Pattern in a Mismatch with the given number of Mismatches"""
+
+def ComputingFrequenciesWithMismatches(Text, k, d): # where text is the sequence to be analysed, k - length of kmer, d - maximum number of mismatches
+    FrequencyArray={}
+    for i in range(4**k):
+        FrequencyArray[i]=0
+    for i in range((len(Text)-k)+1):
+        Pattern=Text[i:i+k]
+        Neighbourhood=Neighbors(Pattern,d)
+        for i in Neighbourhood:
+            j=PatternToNumber(i)
+            FrequencyArray[j]=FrequencyArray[j]+1
+    
+   
+    l=[]
+    x=0
+    for key,v in FrequencyArray.items():
+        if v>x:
+            x=v
+    print(x)
+    for key,value in FrequencyArray.items():
+        if value==x:
+            j=NumberToPattern(key,k)
+            l.append(j)
+            
+    print(*l)
+    return l
+            
+    return FrequencyArray
+
+
+def Neighbors(Pattern,d):
+    l=[]
+    if d==0:
+        return l.append(Pattern)
+    if len(Pattern)==1:
+        return ['A','C','G','T']
+    Neighbourhood=set()
+    SuffixNeighbours=Neighbors(Suffix(Pattern),d) #recursive fucntions
+
+    for Text in SuffixNeighbours:
+        if HammingDistance(Suffix(Pattern),Text)<d:
+            for x in 'ACGT':
+                neighbour=x+Text
+                Neighbourhood.add(neighbour)
+        else:
+            neighbour=Pattern[0]+Text
+            Neighbourhood.add(neighbour)
+
+    return Neighbourhood
+
+
+def Suffix(Text):
+    Text1=Text[1:]
+    return Text1
+
+
+
+def ApproximatePatternMatching(Pattern,Text,d):
+    positions = []
+    l=[]
+    for i in range((len(Text)-len(Pattern))+1):
+        if HammingDistance(Text[i:i+len(Pattern)],Pattern)<=d:
+            positions.append(i)
+    return positions
+
+
+def HammingDistance(String1,String2):
+    count=0
+    for i in range(len(String1)):
+        if String1[i]==String2[i]:
+            continue
+        else:
+            count=count+1
+    if len(String1)>len(String2):
+        diff=len(String1)-len(String2)
+    elif len(String2)>len(String1):
+        diff=len(String2)-len(String1)
+    else:
+        diff=0
+    count=count+diff
+
+    return count
+
+def PatternToNumber (Pattern):
+    h=len(Pattern)
+    sum=0
+    for i in range(h):
+        if Pattern[i]=='A':
+            sum=sum+0
+
+        elif Pattern[i]=='C':
+            f=(h-i)-1
+            sum=sum+(1*(4**f))
+        elif Pattern[i]=='G':
+            f=(h-i)-1
+            sum=sum+(2*(4**f))
+        elif Pattern[i]=='T':
+            f=h-i-1
+            sum=sum+(3*(4**f))
+    return sum
+
+def NumberToPattern(Number,k):
+    num=int(Number)
+    pat=''
+    for i in range(k):
+        rem=num%4
+        if rem==0:
+            pat=pat+'A'
+        elif rem==1:
+            pat=pat+'C'
+        elif rem==2:
+            pat=pat+'G'
+        elif rem==3:
+            pat=pat+'T'
+        
+        num=num//4
+    return pat[::-1]#to reverse the string 
+  
