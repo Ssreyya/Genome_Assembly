@@ -1,6 +1,6 @@
 
 """ Automated Pipeline for analysing fastq raw reads from Illumina sequencer for bacterial Whole Genome Sequencing. Outputs Fastqc, fastp , Spades Filtered Assembly, Bowtie, Bwamem and Prokka"""
-
+""" python code - can be run on a linux platform """
 
 import os
 
