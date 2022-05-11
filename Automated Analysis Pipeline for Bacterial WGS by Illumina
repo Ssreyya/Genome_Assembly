@@ -1,0 +1,126 @@
+
+""" Automated Pipeline for analysing fastq raw reads from Illumina sequencer for bacterial Whole Genome Sequencing. Outputs Fastqc, fastp , Spades Filtered Assembly, Bowtie, Bwamem and Prokka"""
+
+
+import os
+
+"""raw reads file names"""
+rawreads_list=["1.fastq.gz", "2.fastq.gz"]  ## replace here with the required file names
+l=len(rawreads_list) # l = number of inputs
+
+"""fastqc for raw reads"""
+def FastQC(name):
+    os.system("fastqc " + name) #to run on command line
+"""calling the fastqc function for each read"""
+for i in range(l):
+    FastQC(rawreads_list[i])
+
+"""fastp for rawreads"""
+forspades=[]#list that will contain fastp output file names which can be used as input for Spades
+def Fastp(name1,name2):
+    fastp="fastp -i " + name1 + " -I " + name2 + " -o fastp" + name1  +" -O fastp" + name2 #command line script
+    os.system(fastp) #to run on command line
+    forspades.append("fastp"+ name1)
+    forspades.append("fastp" + name2)
+
+"""calling the fastp function for each read"""
+for i in range(0,l,2):
+    Fastp(rawreads_list[i],rawreads_list[i+1])
+
+forfilter=[]#list that will contain spades scaffolds.fasta file name which can be used as input for filtering
+"""Spades on fastp data"""
+def Spades(spadesR1,spadesR2):
+    spade="spades.py -1 "+spadesR1 +" -2 "+ spadesR2 +" -o " + "spades" + spadesR1[5:-12]
+    os.system(spade) #to run on command line
+"""calling Spades function for each pair of reads"""
+for i in range(0,l,2):
+    Spades(forspades[i],forspades[i+1])
+    forfilter.append("spades"+(forspades[i][5:-12])) #5:-12 customised only for this input dataset and can be deleted
+
+
+"""filter scaffolds file and also check for phix contamination"""
+def Filter_Contigs(length,cov,name):
+    handle=open(name)
+    contigs=handle.readlines()
+    b=name.split("/")  #to take in the name of the file
+    cname= b[-1] #path on linux command line
+    dname=b[-1][0:7]  #outputfilename(unique for each output file)
+    database="makeblastdb "+"-in "+ cname+" -dbtype nucl "+" -out " + dname #makeblastdatabase script for command line
+    os.system(database)
+
+    f="blastnof" + dname
+    cmd= "blastn -query phiX174.fas -db " + dname   +" -outfmt 1 -out "+ f
+    os.system(cmd)
+    outfile="cat "+ f + " > " +f+"out.txt" #output text filename for blastn
+    os.system(outfile)
+
+    name1=f+"out.txt"  #output file name for blastn result(the file to read and check for phiX contamination)
+    handle1=open(name1)
+    lines=handle1.readlines()
+
+    nodes_toremove=[]  #creating a list that would contain the hits to be removed
+    for line1 in lines:
+        if "NODE" not in line1:
+            print("no_hits_for_phiX")
+            break
+        else:
+            nodes_toremove.append(">"+line1)
+
+
+    for line in contigs:
+        if ">" in line:
+            splitlist=line.split("_")
+            if int(splitlist[3])<length or float(splitlist[5])<cov or line in nodes_toremove:
+                i_header = contigs.index(line)
+                d=i_header+1
+                for i in range(d,len(contigs)):
+                    if ">" not in contigs[d]:
+                        del contigs[d]
+                    else:
+                        break
+
+    t=name.split("/")
+    x="Filtered" + t[-1]
+    w=">"+t[-1]+"\n"
+
+    finalcontigs=[line for line in contigs if ">" not in line]
+
+    s=str()
+    s=s+w
+    for i in finalcontigs:
+        s=s+i
+    o=open(x,'w')
+    o.write(s)
+
+forblastnfilter=[] # list with scaffolds.fasta from spades
+filtered_assembly=[] #list with filtered assembly
+for i in forfilter:
+    changeloc = "cp " + i + "/scaffolds.fasta ."#to copy contigs.fasta into current working directory
+    os.system(changeloc)
+    rename = "mv "+ "scaffolds.fasta " + i+"scaffolds.fasta" #to rename the scaffolds file
+    os.system(rename)
+    forblastnfilter.append(i+"scaffolds.fasta")
+    name=i+"scaffolds.fasta"
+    Filter_Contigs(250,10,name)
+    filtered_assembly.append("Filtered" + name)
+
+
+"""mapping reads against reference(assembly) using bowtie2"""
+def Bowtie2(read1,read2,assembly):
+    bowtie2 = "bowtie2-build " + assembly + ' indexfile'+ assembly[0:-6] +" && bowtie2 " + "indexfile" + assembly[0:-6] + " -1 "+ read1 + " -2 "+read2+ " -S bowtie2" + assembly[0:-6]+".bam"
+    os.system(bowtie2)
+
+"""annotating the assembly using PROKKA"""
+def PROKKA(assembly):
+    prokka = "prokka " + assembly +" --addgenes --compliant --outdir PROKKA_" + assembly[0:-6]
+    os.system(prokka)
+
+def Bwamem2(read1,read2,assembly):
+    bwamem2= "bwa-mem2 index " + assembly + " && bwa-mem2 mem " + assembly + " "+ read1 + " " + read2 + " > bwamem2of " + assembly[0:-6] + ".bam"
+    os.system(bwamem2)
+
+"""calling prokka, bowtie2, bwamem2 for each assembly"""
+for i,j in zip(filtered_assembly,range(0,l,2)):
+    PROKKA(i)
+    Bowtie2(forspades[j],forspades[j+1],i)
+    Bwamem2(forspades[j],forspades[j+1],i)
